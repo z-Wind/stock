@@ -1,21 +1,19 @@
 package main
 
 import (
-	"bytes"
+	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
-	"github.com/z-Wind/stock/api/alphavantage"
-	"github.com/z-Wind/stock/api/gotd"
-	"github.com/z-Wind/stock/api/twse"
-	"github.com/z-Wind/stock/instance"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
+	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/z-Wind/stock/crawler"
+	"github.com/z-Wind/stock/instance"
+	"github.com/z-Wind/stock/stocker"
 )
 
 var (
@@ -23,69 +21,22 @@ var (
 	githash    = ""
 	goversion  = ""
 
-	td         *gotd.TDAmeritrade
-	alpha      *alphavantage.AlphaVantage
-	tw         *twse.TWSE
-	accountIDs []int64
+	// flag
+	addr        string
+	redirectURL string
+	accountID   string
 
-	quote           Quote
-	priceHistory    PriceHistory
-	priceAdjHistory PriceAdjHistory
+	stockers []stocker.Stocker
 )
 
-func getCurExePath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", errors.Wrap(err, "exec.LookPath")
-	}
-
-	//得到全路径，比如在windows下E:\\golang\\test\\a.exe
-	path, err := filepath.Abs(file)
-	if err != nil {
-		return "", errors.Wrap(err, "filepath.Abs")
-	}
-
-	rst := filepath.Dir(path)
-
-	return rst, nil
-}
-
-func getCurScriptPath() (string, error) {
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", errors.New("runtime.Caller Fail")
-	}
-
-	//得到全路径，比如在windows下E:\\golang\\test\\a.exe
-	path, err := filepath.Abs(file)
-	if err != nil {
-		return "", errors.Wrap(err, "filepath.Abs")
-	}
-
-	rst := filepath.Dir(path)
-
-	return rst, nil
-}
-
-// exists returns whether the given file or directory exists
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return true, err
-}
-
 func init() {
-	tdAPIKey := instance.TdAPIKey
-	tdURL := instance.TdURL
-	alphaVantageKey := instance.AlphaVantageKey
+	flag.StringVar(&addr, "addr", "", "host:port, like localhost:6060 or 127.0.0.1:8090")
+	flag.StringVar(&accountID, "accountID", "", "(option) TDAmeritrade account id")
+	flag.StringVar(&redirectURL, "redirectURL", "", "TDAmeritrade redirectURL")
+}
 
-	var err error
-	path, err := getCurScriptPath()
+func setting() {
+	path, err := getCurExePath()
 	if err != nil {
 		path = "./instance"
 	} else {
@@ -93,40 +44,54 @@ func init() {
 	}
 	log.Printf("Current Path:%s", path)
 
-	//tdAPIKey & tdURL should be added by yourself
-	td, err = gotd.NewTD(tdAPIKey, tdURL, path)
+	td, err := stocker.NewTDAmeritradeTLS(
+		redirectURL,
+		filepath.Join(path, "client_secret.json"),
+		"TDAmeritrade-go.json", filepath.Join(path, "cert.pem"),
+		filepath.Join(path, "key.pem"),
+	)
 	if err != nil {
-		log.Printf("gotdNewTD error: %s\n", err)
-		td = nil
-	} else {
-		quote.RegisterQuote(quoteTD)
-		priceHistory.RegisterPriceHistory(priceHistoryTD)
-		accountIDs, err = td.GetAccountIDs()
-		if err != nil {
-			log.Printf("td.GetAccountIDs Error:%s", err)
-		}
+		panic(err)
 	}
+	Register(td)
 
-	alpha, err = alphavantage.NewAlphaVantage(alphaVantageKey)
+	av, err := stocker.NewAlphavantage(instance.AlphaVantageKey)
 	if err != nil {
-		log.Printf("alphavantage.NewAlphaVantage error: %s\n", err)
-		alpha = nil
-	} else {
-		quote.RegisterQuote(quoteAlpha)
-		priceHistory.RegisterPriceHistory(priceHistoryAlpha)
-		priceAdjHistory.RegisterPriceAdjHistory(priceAdjHistoryAlpha)
+		panic(err)
 	}
+	Register(av)
 
-	tw, err = twse.NewTWSE()
+	twse, err := stocker.NewTWSE()
 	if err != nil {
-		log.Printf("twse.NewTWSE error: %s\n", err)
-		tw = nil
-	} else {
-		quote.RegisterQuote(quoteTWSE)
+		panic(err)
 	}
+	Register(twse)
 }
 
 func main() {
+	flag.Parse()
+	if addr == "" {
+		fmt.Printf("addr is empty\n")
+
+		flag.PrintDefaults()
+		return
+	}
+	if redirectURL == "" {
+		fmt.Printf("redirectURL is empty\n")
+
+		flag.PrintDefaults()
+		return
+	}
+	if accountID == "" {
+		accountID = instance.AccountID
+	}
+
+	setting()
+
+	crawler.ELog.Start("engine.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	crawler.ELog.SetFlags(0)
+	defer crawler.ELog.Stop()
+
 	fmt.Println("=========================================")
 	fmt.Printf("Git Commit Hash: %s\n", githash)
 	fmt.Printf("Build Time : %s\n", buildstamp)
@@ -134,12 +99,22 @@ func main() {
 	fmt.Println("=========================================")
 
 	http.Handle("/", http.HandlerFunc(handleIndex))
-	http.Handle("/quote", http.HandlerFunc(quote.HandlerFunc))
-	http.Handle("/savedOrder", http.HandlerFunc(savedOrder))
-	http.Handle("/priceHistory", http.HandlerFunc(priceHistory.HandlerFunc))
-	http.Handle("/priceAdjHistory", http.HandlerFunc(priceAdjHistory.HandlerFunc))
+	http.Handle("/quote", http.HandlerFunc(handleGet))
+	http.Handle("/priceHistory", http.HandlerFunc(handleGet))
+	http.Handle("/priceAdjHistory", http.HandlerFunc(handleGet))
+	// http.Handle("/savedOrder", http.HandlerFunc(handleSavedOrder))
 
-	log.Fatal(http.ListenAndServe("localhost:6060", nil))
+	fmt.Printf("start stock server: http://%s\n", addr)
+	fmt.Println("=========================================")
+	fmt.Printf("redirectURL: %q\n", redirectURL)
+	fmt.Printf("accountID : %q\n", accountID)
+	fmt.Println("=========================================")
+	log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+// Register 註冊可用 stocker
+func Register(s stocker.Stocker) {
+	stockers = append(stockers, s)
 }
 
 func handleIndex(w http.ResponseWriter, req *http.Request) {
@@ -154,34 +129,120 @@ func handleIndex(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, string(template))
 }
 
-func parseTemplate(fileName string, data interface{}) (output []byte, err error) {
-	var buf bytes.Buffer
-	template, err := template.ParseFiles(fileName)
-	if err != nil {
-		return nil, err
+func makeQuoteParseFunc(f func(string) (float64, error)) func(crawler.Request) (crawler.ParseResult, error) {
+	return func(req crawler.Request) (crawler.ParseResult, error) {
+		parseResult := crawler.ParseResult{
+			Item:     nil,
+			Requests: []crawler.Request{},
+			Done:     false,
+		}
+
+		symbol := req.Item.(string)
+
+		price, err := f(symbol)
+		if err != nil {
+			if _, ok := err.(stocker.ErrorNoSupport); !ok {
+				parseResult.Requests = append(parseResult.Requests, req)
+			} else {
+				parseResult.Done = true
+			}
+			return parseResult, err
+		}
+
+		rsp := Response{
+			symbol: symbol,
+			item:   price,
+		}
+		parseResult.Item = rsp
+		parseResult.Done = true
+
+		return parseResult, nil
 	}
-	err = template.Execute(&buf, data)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
-func removeDuplicates(elements []string) []string {
-	// Use map to record duplicates as we find them.
-	encountered := map[string]struct{}{}
-	result := []string{}
+func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) func(crawler.Request) (crawler.ParseResult, error) {
+	return func(req crawler.Request) (crawler.ParseResult, error) {
+		parseResult := crawler.ParseResult{
+			Item:     nil,
+			Requests: []crawler.Request{},
+			Done:     false,
+		}
 
-	for v := range elements {
-		if _, ok := encountered[elements[v]]; ok {
-			// Do not add duplicate.
-		} else {
-			// Record this element as an encountered element.
-			encountered[elements[v]] = struct{}{}
-			// Append to result slice.
-			result = append(result, elements[v])
+		symbol := req.Item.(string)
+
+		history, err := f(symbol)
+		if err != nil {
+			if _, ok := err.(stocker.ErrorNoSupport); !ok {
+				parseResult.Requests = append(parseResult.Requests, req)
+			} else {
+				parseResult.Done = true
+			}
+			return parseResult, err
+		}
+
+		rsp := Response{
+			symbol: symbol,
+			item:   history,
+		}
+		parseResult.Item = rsp
+		parseResult.Done = true
+
+		return parseResult, nil
+	}
+}
+
+func handleGet(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	query := req.URL.Query()
+	symbolQ := query.Get("symbols")
+	if symbolQ == "" {
+		http.Error(w, "symbols is empty", http.StatusBadRequest)
+		return
+	}
+	symbols := strings.Split(symbolQ, ",")
+	symbols = removeDuplicates(symbols)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	his := newRecord()
+	e := crawler.New(ctx, 10, his.isProcessedOrAdd, his.isDone)
+
+	requests := []crawler.Request{}
+	for _, symbol := range symbols {
+		for _, stk := range stockers {
+			var parseFunc func(crawler.Request) (crawler.ParseResult, error)
+			switch req.URL.Path {
+			case "/quote":
+				parseFunc = makeQuoteParseFunc(stk.Quote)
+			case "/priceHistory":
+				parseFunc = makePriceHistoryParseFunc(stk.PriceHistory)
+			case "/priceAdjHistory":
+				parseFunc = makePriceHistoryParseFunc(stk.PriceAdjHistory)
+			default:
+				http.Error(w, fmt.Sprintf("%s\n not support", req.URL.Path), http.StatusBadRequest)
+				return
+			}
+
+			requests = append(requests, crawler.Request{
+				Item:      symbol,
+				ParseFunc: parseFunc,
+			})
 		}
 	}
-	// Return the new slice.
-	return result
+
+	prices := make(map[string]interface{}, len(symbols))
+	rspChan := e.Run(requests...)
+	for rsp := range rspChan {
+		result := rsp.(Response)
+
+		prices[result.symbol] = result.item
+		his.done(result.symbol)
+	}
+
+	err := json.NewEncoder(w).Encode(prices)
+	if err != nil {
+		log.Printf("json.NewEncoder error: %s\n", err)
+	}
 }

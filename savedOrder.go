@@ -3,24 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/z-Wind/stock/api/gotd/api"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/z-Wind/gotd"
+	"github.com/z-Wind/stock/stocker"
 )
 
 func savedOrder(w http.ResponseWriter, req *http.Request) {
-	err := td.RefreshAccessTokenOrNot()
-	if err != nil {
-		http.Error(w, "Could not RefreshAccessToken", http.StatusInternalServerError)
-		return
-	}
-
-	if len(accountIDs) == 0 || len(accountIDs) > 1 {
-		http.Error(w, "No accountIDs", http.StatusInternalServerError)
-		return
-	}
 	switch req.Method {
 	case http.MethodGet:
 		getSavedOrders(w, req)
@@ -32,19 +24,20 @@ func savedOrder(w http.ResponseWriter, req *http.Request) {
 }
 
 func deleteSavedOrder(w http.ResponseWriter, req *http.Request) {
-	savedOrderIDs, ok := req.URL.Query()["savedOrderID"]
-	if !ok || len(savedOrderIDs) > 1 {
+	savedOrderIDQ := req.URL.Query().Get("savedOrderID")
+	if savedOrderIDQ == "" {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	savedOrderID, err := strconv.ParseInt(savedOrderIDs[0], 10, 64)
+	savedOrderID, err := strconv.ParseInt(savedOrderIDQ, 10, 64)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("savedOrderID %s is not Int", savedOrderIDs[0]), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("savedOrderID %s is not Int", savedOrderIDQ), http.StatusBadRequest)
 		return
 	}
 
-	if err := td.DeleteSavedOrder(accountIDs[0], savedOrderID); err != nil {
-		http.Error(w, errors.WithMessage(err, "td.DeleteSavedOrder").Error(), http.StatusBadRequest)
+	td := stockers[0].(*stocker.TDAmeritrade).Service
+	if _, err := td.SavedOrders.DeleteSavedOrder(accountID, savedOrderID).Do(); err != nil {
+		http.Error(w, errors.WithMessage(err, "td.SavedOrders.DeleteSavedOrder").Error(), http.StatusBadRequest)
 		return
 	}
 }
@@ -52,7 +45,8 @@ func deleteSavedOrder(w http.ResponseWriter, req *http.Request) {
 func getSavedOrders(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	orders, err := td.GetSavedOrdersbyPath(accountIDs[0])
+	td := stockers[0].(*stocker.TDAmeritrade).Service
+	orders, err := td.SavedOrders.GetSavedOrdersByPath(accountID).Do()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -68,15 +62,42 @@ func getSavedOrders(w http.ResponseWriter, req *http.Request) {
 func createSavedOrder(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 
-	var data savedOrderParas
+	var data struct {
+		Symbol      string  `json:"Symbol"`
+		AssetType   string  `json:"AssetType"`
+		Instruction string  `json:"Instruction"`
+		Price       float64 `json:"Price"`
+		Quantity    float64 `json:"Quantity"`
+	}
+
 	err := decoder.Decode(&data)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
-	o := api.NewOrder(data.Symbol, data.AssetType, data.Instruction, data.Price, data.Qunatity)
-	err = td.CreateSavedOrder(accountIDs[0], o)
+	savedOrder := &gotd.SavedOrder{
+		Order: &gotd.Order{
+			Session:    "NORMAL",
+			Duration:   "GOOD_TILL_CANCEL",
+			OrderType:  "LIMIT",
+			CancelTime: time.Now().AddDate(0, 4, 0).UTC().Format("2006-01-02"),
+			Price:      data.Price,
+			OrderLegCollections: []*gotd.OrderLegCollection{
+				&gotd.OrderLegCollection{
+					Instrument: &gotd.Instrument{
+						Symbol:    data.Symbol,
+						AssetType: data.AssetType,
+					},
+					Instruction: data.Instruction,
+					Quantity:    data.Quantity,
+				},
+			},
+		},
+	}
+
+	td := stockers[0].(*stocker.TDAmeritrade).Service
+	_, err = td.SavedOrders.CreateSavedOrder(accountID, savedOrder).Do()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

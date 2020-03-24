@@ -1,23 +1,92 @@
-# stock
-TD API &amp; AlphaVantage API &amp; TWSE API
+# stock - get stock infomation
+[![GoDoc](https://godoc.org/github.com/z-Wind/stock?status.png)](http://godoc.org/github.com/z-Wind/stock)
 
-若要使用 gotd，請先放置 https 相關檔案，指令如下<br/>
-<pre>
-<code>
-		openssl genrsa -out key.pem 2048
-		openssl req -new -x509 -key key.pem -out cert.pem -days 3650
-</code>
-</pre>
-cert.pem<br/>
-key.pem<br/>
-產生後，放到 gotd 資料夾下<br/>
+## Table of Contents
 
-初次啟動時，會出現 TD 認證頁面是正常的<br/>
-因需獲取需可，保證資料皆存在你的電腦上<br/>
+* [Installation](#installation)
+* [Usage](#usage)
+* [Example](#example)
+* [Include](#Include)
 
-若有不需要的 api，可在 main.go 的 init 中修改，也可在此加入需要的 api<br/>
+## Installation
 
-連線網址，會出現極度簡單的用法說明<br/>
-<code>
-	http://localhost:6060/
-</code>
+    $ go get github.com/z-Wind/stock
+
+To build with two ways
+
+    $ cd $GOPATH/src/github.com/z-Wind/stock
+    $ make
+
+(optional) To run unit tests:
+
+    $ cd $GOPATH/src/github.com/z-Wind/stock
+    $ make test
+
+(optional) To clean all except source code:
+
+    $ cd $GOPATH/src/github.com/z-Wind/stock
+    $ make clean
+
+## Usage
+
+### Start server
+    $ stock -addr host:port [-accountID id]
+
+### Quote
+    $ GET http://localhost:6060/quote?symbols={symbols}
+- symbols: seperate by comma，like VTI,VBR
+	
+### PriceHistory
+    $ GET http://localhost:6060/priceHistory?symbols={symbols}
+- symbols: seperate by comma，like VTI,VBR
+
+### PriceAdjHistory
+    $ GET http://localhost:6060/priceAdjHistory?symbols={symbols}
+- symbols: seperate by comma，like VTI,VBR
+
+### SavedOrder
+> just for TD Ameritrade, should set accountID
+
+    $ GET http://localhost:6060/savedOrder
+	
+	$ DELETE http://localhost:6060/savedOrder?savedOrderID={savedOrderID}
+	
+	$ POST JSON http://localhost:6060/savedOrder
+	JSON Format
+    {
+      "Symbol": "string",
+      "AssetType": "string[1]",
+      "Instruction": "string[1]",
+      "Price": 0,
+      "Qunatity": 0
+    }	
+[1] [TD API Create Saved Order](https://developer.tdameritrade.com/account-access/apis/post/accounts/%7BaccountId%7D/savedorders-0)
+
+## Example
+
+### Start server
+
+    $ cd $GOPATH/src/github.com/z-Wind/stock
+    $ ./stock -addr localhost:6060 -redirectURL http://localhost:8090/
+
+### Simple Demo
+    go to http://localhost:6060/
+
+### Quote
+    $ curl -X GET http://localhost:6060/quote?symbols=VTI,VBR,0050.tw,6564.two
+	
+### PriceHistory
+    $ curl -X GET http://localhost:6060/priceHistory?symbols=VTI,VBR,0050.tw,6564.two
+	
+### PriceAdjHistory
+    $ curl -X GET http://localhost:6060/priceAdjHistory?symbols=VTI,VBR,0050.tw,6564.two
+	
+### SavedOrder
+> for just TD Ameritrade, should set accountID
+
+    $ curl -X GET http://localhost:6060/savedOrder
+
+## Include
+- [gotd](https://github.com/z-Wind/gotd)
+- [twse](https://github.com/z-Wind/twse)
+- [alphavantage](https://github.com/z-Wind/alphavantage)
