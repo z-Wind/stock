@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/z-Wind/stock/crawler"
+	engine "github.com/z-Wind/concurrencyengine"
 	"github.com/z-Wind/stock/instance"
 	"github.com/z-Wind/stock/stocker"
 )
@@ -22,20 +22,20 @@ var (
 	goversion  = ""
 
 	// flag
-	addr        string
-	redirectURL string
-	accountID   string
+	addr      string
+	accountID string
 
-	stockers []stocker.Stocker
+	stockers map[string]stocker.Stocker
 )
 
 func init() {
 	flag.StringVar(&addr, "addr", "", "host:port, like localhost:6060 or 127.0.0.1:8090")
 	flag.StringVar(&accountID, "accountID", "", "(option) TDAmeritrade account id")
-	flag.StringVar(&redirectURL, "redirectURL", "", "TDAmeritrade redirectURL")
 }
 
 func setting() {
+	stockers = make(map[string]stocker.Stocker)
+
 	path, err := getCurExePath()
 	if err != nil {
 		path = "./instance"
@@ -45,7 +45,6 @@ func setting() {
 	log.Printf("Current Path:%s", path)
 
 	td, err := stocker.NewTDAmeritradeTLS(
-		redirectURL,
 		filepath.Join(path, "client_secret.json"),
 		"TDAmeritrade-go.json", filepath.Join(path, "cert.pem"),
 		filepath.Join(path, "key.pem"),
@@ -53,19 +52,19 @@ func setting() {
 	if err != nil {
 		panic(err)
 	}
-	Register(td)
+	Register("TDAmeritrade", td)
 
 	av, err := stocker.NewAlphavantage(instance.AlphaVantageKey)
 	if err != nil {
 		panic(err)
 	}
-	Register(av)
+	Register("alphavantage", av)
 
 	twse, err := stocker.NewTWSE()
 	if err != nil {
 		panic(err)
 	}
-	Register(twse)
+	Register("twse", twse)
 }
 
 func main() {
@@ -76,21 +75,15 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	if redirectURL == "" {
-		fmt.Printf("redirectURL is empty\n")
-
-		flag.PrintDefaults()
-		return
-	}
 	if accountID == "" {
 		accountID = instance.AccountID
 	}
 
 	setting()
 
-	crawler.ELog.Start("engine.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	crawler.ELog.SetFlags(0)
-	defer crawler.ELog.Stop()
+	engine.ELog.Start("engine.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	engine.ELog.SetFlags(0)
+	defer engine.ELog.Stop()
 
 	fmt.Println("=========================================")
 	fmt.Printf("Git Commit Hash: %s\n", githash)
@@ -106,15 +99,14 @@ func main() {
 
 	fmt.Printf("start stock server: http://%s\n", addr)
 	fmt.Println("=========================================")
-	fmt.Printf("redirectURL: %q\n", redirectURL)
 	fmt.Printf("accountID : %q\n", accountID)
 	fmt.Println("=========================================")
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
 // Register 註冊可用 stocker
-func Register(s stocker.Stocker) {
-	stockers = append(stockers, s)
+func Register(name string, s stocker.Stocker) {
+	stockers[name] = s
 }
 
 func handleIndex(w http.ResponseWriter, req *http.Request) {
@@ -129,23 +121,26 @@ func handleIndex(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, string(template))
 }
 
-func makeQuoteParseFunc(f func(string) (float64, error)) func(crawler.Request) (crawler.ParseResult, error) {
-	return func(req crawler.Request) (crawler.ParseResult, error) {
-		parseResult := crawler.ParseResult{
-			Item:     nil,
-			Requests: []crawler.Request{},
-			Done:     false,
+func makeQuoteParseFunc(f func(string) (float64, error)) func(engine.Request) (engine.ParseResult, error) {
+	return func(req engine.Request) (engine.ParseResult, error) {
+		parseResult := engine.ParseResult{
+			Item:          nil,
+			ExtraRequests: []engine.Request{},
+			RedoRequests:  []engine.Request{},
+			Done:          false,
 		}
 
 		symbol := req.Item.(string)
 
 		price, err := f(symbol)
 		if err != nil {
-			if _, ok := err.(stocker.ErrorNoSupport); !ok {
-				parseResult.Requests = append(parseResult.Requests, req)
-			} else {
+			switch err.(type) {
+			case stocker.ErrorNoSupport, stocker.ErrorNoFound:
 				parseResult.Done = true
+			default:
+				parseResult.RedoRequests = append(parseResult.RedoRequests, req)
 			}
+
 			return parseResult, err
 		}
 
@@ -160,23 +155,26 @@ func makeQuoteParseFunc(f func(string) (float64, error)) func(crawler.Request) (
 	}
 }
 
-func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) func(crawler.Request) (crawler.ParseResult, error) {
-	return func(req crawler.Request) (crawler.ParseResult, error) {
-		parseResult := crawler.ParseResult{
-			Item:     nil,
-			Requests: []crawler.Request{},
-			Done:     false,
+func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) func(engine.Request) (engine.ParseResult, error) {
+	return func(req engine.Request) (engine.ParseResult, error) {
+		parseResult := engine.ParseResult{
+			Item:          nil,
+			ExtraRequests: []engine.Request{},
+			RedoRequests:  []engine.Request{},
+			Done:          false,
 		}
 
 		symbol := req.Item.(string)
 
 		history, err := f(symbol)
 		if err != nil {
-			if _, ok := err.(stocker.ErrorNoSupport); !ok {
-				parseResult.Requests = append(parseResult.Requests, req)
-			} else {
+			switch err.(type) {
+			case stocker.ErrorNoSupport, stocker.ErrorNoFound:
 				parseResult.Done = true
+			default:
+				parseResult.RedoRequests = append(parseResult.RedoRequests, req)
 			}
+
 			return parseResult, err
 		}
 
@@ -189,6 +187,12 @@ func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) fun
 
 		return parseResult, nil
 	}
+}
+
+func reqToKey(req engine.Request) interface{} {
+	key := req.Item.(string)
+
+	return strings.ToUpper(key)
 }
 
 func handleGet(w http.ResponseWriter, req *http.Request) {
@@ -206,13 +210,13 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	his := newRecord()
-	e := crawler.New(ctx, 10, his.isProcessedOrAdd, his.isDone)
+	e := engine.New(ctx, 10, reqToKey)
 
-	requests := []crawler.Request{}
+	requests := []engine.Request{}
 	for _, symbol := range symbols {
+		symbol = strings.ToUpper(symbol)
 		for _, stk := range stockers {
-			var parseFunc func(crawler.Request) (crawler.ParseResult, error)
+			var parseFunc func(engine.Request) (engine.ParseResult, error)
 			switch req.URL.Path {
 			case "/quote":
 				parseFunc = makeQuoteParseFunc(stk.Quote)
@@ -225,7 +229,7 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			requests = append(requests, crawler.Request{
+			requests = append(requests, engine.Request{
 				Item:      symbol,
 				ParseFunc: parseFunc,
 			})
@@ -238,7 +242,7 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 		result := rsp.(Response)
 
 		prices[result.symbol] = result.item
-		his.done(result.symbol)
+		e.Recorder.Done(result.symbol)
 	}
 
 	err := json.NewEncoder(w).Encode(prices)

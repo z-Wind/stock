@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -35,8 +36,14 @@ func deleteSavedOrder(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	td := stockers[0].(*stocker.TDAmeritrade).Service
-	if _, err := td.SavedOrders.DeleteSavedOrder(accountID, savedOrderID).Do(); err != nil {
+	td, ok := stockers["TDAmeritrade"]
+	if !ok {
+		http.Error(w, fmt.Sprintf("TDAmeritrade is not supported"), http.StatusBadRequest)
+		return
+	}
+
+	service := td.(*stocker.TDAmeritrade).Service
+	if _, err := service.SavedOrders.DeleteSavedOrder(accountID, savedOrderID).Do(); err != nil {
 		http.Error(w, errors.WithMessage(err, "td.SavedOrders.DeleteSavedOrder").Error(), http.StatusBadRequest)
 		return
 	}
@@ -45,8 +52,14 @@ func deleteSavedOrder(w http.ResponseWriter, req *http.Request) {
 func getSavedOrders(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	td := stockers[0].(*stocker.TDAmeritrade).Service
-	orders, err := td.SavedOrders.GetSavedOrdersByPath(accountID).Do()
+	td, ok := stockers["TDAmeritrade"]
+	if !ok {
+		http.Error(w, fmt.Sprintf("TDAmeritrade is not supported"), http.StatusBadRequest)
+		return
+	}
+
+	service := td.(*stocker.TDAmeritrade).Service
+	orders, err := service.SavedOrders.GetSavedOrdersByPath(accountID).Do()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -86,7 +99,7 @@ func createSavedOrder(w http.ResponseWriter, req *http.Request) {
 			OrderLegCollections: []*gotd.OrderLegCollection{
 				&gotd.OrderLegCollection{
 					Instrument: &gotd.Instrument{
-						Symbol:    data.Symbol,
+						Symbol:    strings.ToUpper(data.Symbol),
 						AssetType: data.AssetType,
 					},
 					Instruction: data.Instruction,
@@ -96,8 +109,14 @@ func createSavedOrder(w http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	td := stockers[0].(*stocker.TDAmeritrade).Service
-	_, err = td.SavedOrders.CreateSavedOrder(accountID, savedOrder).Do()
+	td, ok := stockers["TDAmeritrade"]
+	if !ok {
+		http.Error(w, fmt.Sprintf("TDAmeritrade is not supported"), http.StatusBadRequest)
+		return
+	}
+
+	service := td.(*stocker.TDAmeritrade).Service
+	_, err = service.SavedOrders.CreateSavedOrder(accountID, savedOrder).Do()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

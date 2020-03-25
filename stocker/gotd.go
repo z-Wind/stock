@@ -1,6 +1,8 @@
 package stocker
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/z-Wind/gotd"
 )
@@ -11,8 +13,8 @@ type TDAmeritrade struct {
 }
 
 // NewTDAmeritrade 建立 gotd Service
-func NewTDAmeritrade(redirectURL, clientsecretPath, tokenFile string) (*TDAmeritrade, error) {
-	auth := gotd.NewAuth(redirectURL)
+func NewTDAmeritrade(clientsecretPath, tokenFile string) (*TDAmeritrade, error) {
+	auth := gotd.NewAuth()
 	client := auth.GetClient(clientsecretPath, tokenFile)
 	td, err := gotd.New(client)
 	if err != nil {
@@ -22,8 +24,8 @@ func NewTDAmeritrade(redirectURL, clientsecretPath, tokenFile string) (*TDAmerit
 }
 
 // NewTDAmeritradeTLS 建立 gotd Service
-func NewTDAmeritradeTLS(redirectURL, clientsecretPath, tokenFile, TLSCertPath, TLSKeyPath string) (*TDAmeritrade, error) {
-	auth := gotd.NewAuth(redirectURL)
+func NewTDAmeritradeTLS(clientsecretPath, tokenFile, TLSCertPath, TLSKeyPath string) (*TDAmeritrade, error) {
+	auth := gotd.NewAuth()
 	auth.SetTLS(TLSCertPath, TLSKeyPath)
 	client := auth.GetClient(clientsecretPath, tokenFile)
 	td, err := gotd.New(client)
@@ -38,6 +40,10 @@ func (td *TDAmeritrade) Quote(symbol string) (float64, error) {
 	call := td.Service.Quotes.GetQuote(symbol)
 	quote, err := call.Do()
 	if err != nil {
+		if strings.Contains(err.Error(), "not be found") {
+			return 0, ErrorNoFound{err.Error()}
+		}
+
 		return 0, errors.Wrapf(err, "gotd: QuoteEndpoint.Do")
 	}
 
@@ -53,6 +59,9 @@ func (td *TDAmeritrade) PriceHistory(symbol string) ([]*DatePrice, error) {
 	call.Frequency(1)
 	p, err := call.Do()
 	if err != nil {
+		if strings.Contains(err.Error(), "not be found") {
+			return nil, ErrorNoFound{err.Error()}
+		}
 		return nil, errors.WithMessage(err, "gotd: Daily.Do")
 	}
 

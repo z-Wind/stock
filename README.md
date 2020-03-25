@@ -67,7 +67,7 @@ To build with two ways
 ### Start server
 
     $ cd $GOPATH/src/github.com/z-Wind/stock
-    $ ./stock -addr localhost:6060 -redirectURL http://localhost:8090/
+    $ ./stock -addr localhost:6060 
 
 ### Simple Demo
     go to http://localhost:6060/
