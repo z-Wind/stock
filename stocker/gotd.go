@@ -62,7 +62,7 @@ func (td *TDAmeritrade) PriceHistory(symbol string) ([]*DatePrice, error) {
 		if strings.Contains(err.Error(), "not be found") {
 			return nil, ErrorNoFound{err.Error()}
 		}
-		return nil, errors.WithMessage(err, "gotd: Daily.Do")
+		return nil, errors.Wrapf(err, "gotd: Daily.Do")
 	}
 
 	timeSeries := make([]*DatePrice, len(p.Candles))

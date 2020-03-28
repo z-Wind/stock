@@ -72,7 +72,7 @@ func (t *TWSE) priceHistoryTWSE(symbol string) ([]*DatePrice, error) {
 	call := t.Service.Timeseries.MonthlyTWSE(id, time.Now())
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.WithMessage(err, "twse: MonthlyTWSE.Do")
+		return nil, errors.Wrapf(err, "twse: MonthlyTWSE.Do")
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))
@@ -95,7 +95,7 @@ func (t *TWSE) priceHistoryOTC(symbol string) ([]*DatePrice, error) {
 	call := t.Service.Timeseries.MonthlyOTC(id, time.Now())
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.WithMessage(err, "twse: MonthlyOTC.Do")
+		return nil, errors.Wrapf(err, "twse: MonthlyOTC.Do")
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))

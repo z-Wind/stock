@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 
 	engine "github.com/z-Wind/concurrencyengine"
 	"github.com/z-Wind/stock/instance"
@@ -178,6 +180,11 @@ func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) fun
 			return parseResult, err
 		}
 
+		// 日期由小到大
+		sort.Slice(history, func(i, j int) bool {
+			return time.Time(history[i].Date).Unix() < time.Time(history[j].Date).Unix()
+		})
+
 		rsp := Response{
 			symbol: symbol,
 			item:   history,
@@ -236,7 +243,12 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	// 初始化
 	prices := make(map[string]interface{}, len(symbols))
+	for _, symbol := range symbols {
+		prices[symbol] = nil
+	}
+
 	rspChan := e.Run(requests...)
 	for rsp := range rspChan {
 		result := rsp.(Response)

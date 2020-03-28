@@ -44,7 +44,7 @@ func deleteSavedOrder(w http.ResponseWriter, req *http.Request) {
 
 	service := td.(*stocker.TDAmeritrade).Service
 	if _, err := service.SavedOrders.DeleteSavedOrder(accountID, savedOrderID).Do(); err != nil {
-		http.Error(w, errors.WithMessage(err, "td.SavedOrders.DeleteSavedOrder").Error(), http.StatusBadRequest)
+		http.Error(w, errors.Wrapf(err, "td.SavedOrders.DeleteSavedOrder").Error(), http.StatusBadRequest)
 		return
 	}
 }

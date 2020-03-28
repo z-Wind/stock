@@ -1,6 +1,8 @@
 package stocker
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/z-Wind/alphavantage"
 )
@@ -37,7 +39,7 @@ func (av *Alphavantage) PriceHistory(symbol string) ([]*DatePrice, error) {
 	call = call.Outputsize(alphavantage.OutputSizeFull)
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.WithMessage(err, "alphavantage: Daily.Do")
+		return nil, errors.Wrapf(err, "alphavantage: Daily.Do")
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))
@@ -62,18 +64,22 @@ func (av *Alphavantage) PriceAdjHistory(symbol string) ([]*DatePrice, error) {
 	call = call.Outputsize(alphavantage.OutputSizeFull)
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.WithMessage(err, "alphavantage: DailyAdj.Do")
+		if strings.Contains(err.Error(), "Invalid API call") {
+			return nil, ErrorNoSupport{err.Error()}
+		}
+		return nil, errors.Wrapf(err, "alphavantage: DailyAdj.Do")
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))
 	for i, trade := range p.TimeSeries {
 		t := DatePrice{
-			Date:   Time(trade.Time),
-			Open:   trade.Open,
-			High:   trade.High,
-			Low:    trade.Low,
-			Close:  trade.Close,
-			Volume: trade.Volume,
+			Date:     Time(trade.Time),
+			Open:     trade.Open,
+			High:     trade.High,
+			Low:      trade.Low,
+			Close:    trade.Close,
+			CloseAdj: trade.AdjustedClose,
+			Volume:   trade.Volume,
 		}
 		timeSeries[i] = &t
 	}
