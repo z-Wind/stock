@@ -17,3 +17,12 @@ type ErrorNoFound struct {
 func (e ErrorNoFound) Error() string {
 	return e.Message
 }
+
+// ErrorFatal fatal error
+type ErrorFatal struct {
+	Message string
+}
+
+func (e ErrorFatal) Error() string {
+	return e.Message
+}

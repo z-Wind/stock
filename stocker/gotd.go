@@ -40,11 +40,13 @@ func (td *TDAmeritrade) Quote(symbol string) (float64, error) {
 	call := td.Service.Quotes.GetQuote(symbol)
 	quote, err := call.Do()
 	if err != nil {
+		err = errors.Wrapf(err, "gotd: QuoteEndpoint.Do")
+
 		if strings.Contains(err.Error(), "not be found") {
 			return 0, ErrorNoFound{err.Error()}
 		}
 
-		return 0, errors.Wrapf(err, "gotd: QuoteEndpoint.Do")
+		return 0, err
 	}
 
 	return float64(quote.Mark), nil
@@ -59,10 +61,12 @@ func (td *TDAmeritrade) PriceHistory(symbol string) ([]*DatePrice, error) {
 	call.Frequency(1)
 	p, err := call.Do()
 	if err != nil {
+		err = errors.Wrapf(err, "gotd: Daily.Do")
+
 		if strings.Contains(err.Error(), "not be found") {
 			return nil, ErrorNoFound{err.Error()}
 		}
-		return nil, errors.Wrapf(err, "gotd: Daily.Do")
+		return nil, err
 	}
 
 	timeSeries := make([]*DatePrice, len(p.Candles))

@@ -137,7 +137,7 @@ func makeQuoteParseFunc(f func(string) (float64, error)) func(engine.Request) (e
 		price, err := f(symbol)
 		if err != nil {
 			switch err.(type) {
-			case stocker.ErrorNoSupport, stocker.ErrorNoFound:
+			case stocker.ErrorNoSupport, stocker.ErrorNoFound, stocker.ErrorFatal:
 				parseResult.Done = true
 			default:
 				parseResult.RedoRequests = append(parseResult.RedoRequests, req)
@@ -171,7 +171,7 @@ func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) fun
 		history, err := f(symbol)
 		if err != nil {
 			switch err.(type) {
-			case stocker.ErrorNoSupport, stocker.ErrorNoFound:
+			case stocker.ErrorNoSupport, stocker.ErrorNoFound, stocker.ErrorFatal:
 				parseResult.Done = true
 			default:
 				parseResult.RedoRequests = append(parseResult.RedoRequests, req)

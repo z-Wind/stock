@@ -97,7 +97,7 @@ func createSavedOrder(w http.ResponseWriter, req *http.Request) {
 			CancelTime: time.Now().AddDate(0, 4, 0).UTC().Format("2006-01-02"),
 			Price:      data.Price,
 			OrderLegCollections: []*gotd.OrderLegCollection{
-				&gotd.OrderLegCollection{
+				{
 					Instrument: &gotd.Instrument{
 						Symbol:    strings.ToUpper(data.Symbol),
 						AssetType: data.AssetType,

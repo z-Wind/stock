@@ -27,7 +27,12 @@ func (av *Alphavantage) Quote(symbol string) (float64, error) {
 	call := av.Service.TimeSeries.QuoteEndpoint(symbol)
 	quote, err := call.Do()
 	if err != nil {
-		return 0, errors.Wrapf(err, "alphavantage: QuoteEndpoint.Do")
+		err = errors.Wrapf(err, "alphavantage: QuoteEndpoint.Do")
+
+		if strings.Contains(err.Error(), "not be found") {
+			return 0, ErrorNoFound{err.Error()}
+		}
+		return 0, err
 	}
 
 	return float64(quote.Price), nil
@@ -39,7 +44,12 @@ func (av *Alphavantage) PriceHistory(symbol string) ([]*DatePrice, error) {
 	call = call.Outputsize(alphavantage.OutputSizeFull)
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.Wrapf(err, "alphavantage: Daily.Do")
+		err = errors.Wrapf(err, "alphavantage: Daily.Do")
+
+		if strings.Contains(err.Error(), "not be found") {
+			return nil, ErrorNoFound{err.Error()}
+		}
+		return nil, err
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))
@@ -64,10 +74,12 @@ func (av *Alphavantage) PriceAdjHistory(symbol string) ([]*DatePrice, error) {
 	call = call.Outputsize(alphavantage.OutputSizeFull)
 	p, err := call.Do()
 	if err != nil {
+		err = errors.Wrapf(err, "alphavantage: DailyAdj.Do")
+
 		if strings.Contains(err.Error(), "Invalid API call") {
 			return nil, ErrorNoSupport{err.Error()}
 		}
-		return nil, errors.Wrapf(err, "alphavantage: DailyAdj.Do")
+		return nil, err
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))

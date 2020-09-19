@@ -47,17 +47,17 @@ func (t *TWSE) Quote(symbol string) (float64, error) {
 		call := t.Service.Quotes.GetStockInfoTWSE(id)
 		quote, err = call.Do()
 		if err != nil {
-			return 0, errors.Wrapf(err, "twse: GetStockInfoTWSE.Do")
+			return 0, ErrorFatal{errors.Wrapf(err, "twse: GetStockInfoTWSE.Do").Error()}
 		}
 	case t.isOTC(symbol):
 		id := strings.SplitN(symbol, ".", 2)[0]
 		call := t.Service.Quotes.GetStockInfoOTC(id)
 		quote, err = call.Do()
 		if err != nil {
-			return 0, errors.Wrapf(err, "twse: GetStockInfoOTC.Do")
+			return 0, ErrorFatal{errors.Wrapf(err, "twse: GetStockInfoOTC.Do").Error()}
 		}
 	default:
-		return 0, ErrorNoSupport{fmt.Sprintf("%s is not supported by TWSE Quote", symbol)}
+		return 0, ErrorNoSupport{fmt.Sprintf("twse: Quote: %s is not supported", symbol)}
 	}
 
 	price := quote.TradePrice
@@ -122,7 +122,7 @@ func (t *TWSE) PriceHistory(symbol string) ([]*DatePrice, error) {
 	case t.isOTC(symbol):
 		return t.priceHistoryOTC(symbol)
 	default:
-		return nil, ErrorNoSupport{fmt.Sprintf("%s is not supported by TWSE PriceHistory", symbol)}
+		return nil, ErrorNoSupport{fmt.Sprintf("twse: PriceHistory: %s is not supported", symbol)}
 	}
 }
 
