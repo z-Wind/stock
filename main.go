@@ -27,6 +27,7 @@ var (
 	addr      string
 	accountID string
 
+	exePath  string
 	stockers map[string]stocker.Stocker
 )
 
@@ -38,11 +39,13 @@ func init() {
 func setting() {
 	stockers = make(map[string]stocker.Stocker)
 
-	path, err := getCurExePath()
+	var err error
+	var path string
+	exePath, err = getCurExePath()
 	if err != nil {
 		path = "./instance"
 	} else {
-		path = filepath.Join(path, "instance")
+		path = filepath.Join(exePath, "instance")
 	}
 	log.Printf("Current Path:%s", path)
 
@@ -114,7 +117,7 @@ func Register(name string, s stocker.Stocker) {
 func handleIndex(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
-	template, err := parseTemplate("templates/index.html", nil)
+	template, err := parseTemplate(filepath.Join(exePath, "templates/index.html"), nil)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
