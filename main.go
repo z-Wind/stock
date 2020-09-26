@@ -100,7 +100,7 @@ func main() {
 	http.Handle("/quote", http.HandlerFunc(handleGet))
 	http.Handle("/priceHistory", http.HandlerFunc(handleGet))
 	http.Handle("/priceAdjHistory", http.HandlerFunc(handleGet))
-	// http.Handle("/savedOrder", http.HandlerFunc(handleSavedOrder))
+	http.Handle("/savedOrder", http.HandlerFunc(handleSavedOrder))
 
 	fmt.Printf("start stock server: http://%s\n", addr)
 	fmt.Println("=========================================")
@@ -264,4 +264,8 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("json.NewEncoder error: %s\n", err)
 	}
+}
+
+func handleSavedOrder(w http.ResponseWriter, req *http.Request) {
+	savedOrder(w, req)
 }
