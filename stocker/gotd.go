@@ -46,7 +46,7 @@ func (td *TDAmeritrade) Quote(symbol string) (float64, error) {
 			return 0, ErrorNoFound{err.Error()}
 		}
 
-		return 0, err
+		return 0, ErrorFatal{err.Error()}
 	}
 
 	return float64(quote.Mark), nil
@@ -66,7 +66,7 @@ func (td *TDAmeritrade) PriceHistory(symbol string) ([]*DatePrice, error) {
 		if strings.Contains(err.Error(), "not be found") {
 			return nil, ErrorNoFound{err.Error()}
 		}
-		return nil, err
+		return nil, ErrorFatal{err.Error()}
 	}
 
 	timeSeries := make([]*DatePrice, len(p.Candles))
@@ -80,6 +80,10 @@ func (td *TDAmeritrade) PriceHistory(symbol string) ([]*DatePrice, error) {
 			Volume: trade.Volume,
 		}
 		timeSeries[i] = &t
+	}
+
+	if len(timeSeries) == 0 {
+		return nil, ErrorFatal{"Empty List"}
 	}
 
 	return timeSeries, nil

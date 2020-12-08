@@ -72,7 +72,7 @@ func (t *TWSE) priceHistoryTWSE(symbol string) ([]*DatePrice, error) {
 	call := t.Service.Timeseries.MonthlyTWSE(id, time.Now())
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.Wrapf(err, "twse: MonthlyTWSE.Do")
+		return nil, ErrorFatal{errors.Wrapf(err, "twse: MonthlyTWSE.Do").Error()}
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))
@@ -86,6 +86,10 @@ func (t *TWSE) priceHistoryTWSE(symbol string) ([]*DatePrice, error) {
 			Volume: float64(trade.Volume),
 		}
 		timeSeries[i] = &t
+	}
+
+	if len(timeSeries) == 0 {
+		return nil, ErrorFatal{"Empty List"}
 	}
 
 	return timeSeries, nil
@@ -95,7 +99,7 @@ func (t *TWSE) priceHistoryOTC(symbol string) ([]*DatePrice, error) {
 	call := t.Service.Timeseries.MonthlyOTC(id, time.Now())
 	p, err := call.Do()
 	if err != nil {
-		return nil, errors.Wrapf(err, "twse: MonthlyOTC.Do")
+		return nil, ErrorFatal{errors.Wrapf(err, "twse: MonthlyOTC.Do").Error()}
 	}
 
 	timeSeries := make([]*DatePrice, len(p.TimeSeries))
@@ -109,6 +113,10 @@ func (t *TWSE) priceHistoryOTC(symbol string) ([]*DatePrice, error) {
 			Volume: float64(trade.Volume),
 		}
 		timeSeries[i] = &t
+	}
+
+	if len(timeSeries) == 0 {
+		return nil, ErrorFatal{"Empty List"}
 	}
 
 	return timeSeries, nil

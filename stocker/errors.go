@@ -9,7 +9,7 @@ func (e ErrorNoSupport) Error() string {
 	return e.Message
 }
 
-// ErrorNotFound no found
+// ErrorNoFound no found
 type ErrorNoFound struct {
 	Message string
 }

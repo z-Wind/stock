@@ -70,6 +70,12 @@ func setting() {
 		panic(err)
 	}
 	Register("twse", twse)
+
+	yfinance, err := stocker.NewYahooFinance()
+	if err != nil {
+		panic(err)
+	}
+	Register("yfinance", yfinance)
 }
 
 func main() {
