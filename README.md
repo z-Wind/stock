@@ -90,3 +90,4 @@ To build with two ways
 - [gotd](https://github.com/z-Wind/gotd)
 - [twse](https://github.com/z-Wind/twse)
 - [alphavantage](https://github.com/z-Wind/alphavantage)
+- [yahoofinance](https://github.com/z-Wind/yahoofinance)
