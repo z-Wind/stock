@@ -1,6 +1,7 @@
 package stocker
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -24,8 +25,9 @@ func NewYahooFinance() (*YahooFinance, error) {
 }
 
 // Quote 得到股票價格
-func (yf *YahooFinance) Quote(symbol string) (float64, error) {
+func (yf *YahooFinance) Quote(ctx context.Context, symbol string) (float64, error) {
 	call := yf.Service.Quote.RegularMarketPrice(symbol)
+	call.Context(ctx)
 	quote, err := call.Do()
 	if err != nil {
 		err = errors.Wrapf(err, "yfinance: Quote.Do")
@@ -40,8 +42,9 @@ func (yf *YahooFinance) Quote(symbol string) (float64, error) {
 }
 
 // PriceHistory 得到股票歷史價格
-func (yf *YahooFinance) PriceHistory(symbol string) ([]*DatePrice, error) {
+func (yf *YahooFinance) PriceHistory(ctx context.Context, symbol string) ([]*DatePrice, error) {
 	call := yf.Service.History.Period(symbol, "max", "1d")
+	call.Context(ctx)
 	p, err := call.Do()
 	if err != nil {
 		err = errors.Wrapf(err, "yfinance: Daily.Do")
@@ -82,8 +85,9 @@ func (yf *YahooFinance) PriceHistory(symbol string) ([]*DatePrice, error) {
 }
 
 // PriceAdjHistory 得到股票歷史 Adj 價格
-func (yf *YahooFinance) PriceAdjHistory(symbol string) ([]*DatePrice, error) {
+func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*DatePrice, error) {
 	call := yf.Service.History.Period(symbol, "max", "1d")
+	call.Context(ctx)
 	p, err := call.Do()
 	if err != nil {
 		err = errors.Wrapf(err, "yfinance: Daily.Do")

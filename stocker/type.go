@@ -1,6 +1,7 @@
 package stocker
 
 import (
+	"context"
 	"time"
 
 	"github.com/pkg/errors"
@@ -9,11 +10,11 @@ import (
 // Stocker get stock infomation
 type Stocker interface {
 	// 得到股票價格
-	Quote(symbol string) (float64, error)
+	Quote(ctx context.Context, symbol string) (float64, error)
 	// 得到股票歷史價格
-	PriceHistory(symbol string) ([]*DatePrice, error)
+	PriceHistory(ctx context.Context, symbol string) ([]*DatePrice, error)
 	// 得到股票歷史 Adj 價格
-	PriceAdjHistory(symbol string) ([]*DatePrice, error)
+	PriceAdjHistory(ctx context.Context, symbol string) ([]*DatePrice, error)
 }
 
 // DatePrice price with date

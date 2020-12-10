@@ -12,4 +12,5 @@ require (
 	github.com/z-Wind/yahoofinance v0.0.0-20201208152059-5f5c102f7c2f
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43 // indirect
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 )

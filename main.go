@@ -132,7 +132,7 @@ func handleIndex(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, string(template))
 }
 
-func makeQuoteParseFunc(f func(string) (float64, error)) func(engine.Request) (engine.ParseResult, error) {
+func makeQuoteParseFunc(ctx context.Context, f func(context.Context, string) (float64, error)) func(engine.Request) (engine.ParseResult, error) {
 	return func(req engine.Request) (engine.ParseResult, error) {
 		parseResult := engine.ParseResult{
 			Item:          nil,
@@ -143,7 +143,7 @@ func makeQuoteParseFunc(f func(string) (float64, error)) func(engine.Request) (e
 
 		symbol := req.Item.(string)
 
-		price, err := f(symbol)
+		price, err := f(ctx, symbol)
 		if err != nil {
 			switch err.(type) {
 			case stocker.ErrorNoSupport, stocker.ErrorNoFound, stocker.ErrorFatal:
@@ -166,7 +166,7 @@ func makeQuoteParseFunc(f func(string) (float64, error)) func(engine.Request) (e
 	}
 }
 
-func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) func(engine.Request) (engine.ParseResult, error) {
+func makePriceHistoryParseFunc(ctx context.Context, f func(context.Context, string) ([]*stocker.DatePrice, error)) func(engine.Request) (engine.ParseResult, error) {
 	return func(req engine.Request) (engine.ParseResult, error) {
 		parseResult := engine.ParseResult{
 			Item:          nil,
@@ -177,7 +177,7 @@ func makePriceHistoryParseFunc(f func(string) ([]*stocker.DatePrice, error)) fun
 
 		symbol := req.Item.(string)
 
-		history, err := f(symbol)
+		history, err := f(ctx, symbol)
 		if err != nil {
 			switch err.(type) {
 			case stocker.ErrorNoSupport, stocker.ErrorNoFound, stocker.ErrorFatal:
@@ -229,17 +229,20 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 	e := engine.New(ctx, 10, reqToKey)
 
 	requests := []engine.Request{}
+	ctxMap := make(map[string]context.CancelFunc, len(symbols))
 	for _, symbol := range symbols {
 		symbol = strings.ToUpper(symbol)
+		ctxSymbol, cancelSymbol := context.WithCancel(context.Background())
+		ctxMap[symbol] = cancelSymbol
 		for _, stk := range stockers {
 			var parseFunc func(engine.Request) (engine.ParseResult, error)
 			switch req.URL.Path {
 			case "/quote":
-				parseFunc = makeQuoteParseFunc(stk.Quote)
+				parseFunc = makeQuoteParseFunc(ctxSymbol, stk.Quote)
 			case "/priceHistory":
-				parseFunc = makePriceHistoryParseFunc(stk.PriceHistory)
+				parseFunc = makePriceHistoryParseFunc(ctxSymbol, stk.PriceHistory)
 			case "/priceAdjHistory":
-				parseFunc = makePriceHistoryParseFunc(stk.PriceAdjHistory)
+				parseFunc = makePriceHistoryParseFunc(ctxSymbol, stk.PriceAdjHistory)
 			default:
 				http.Error(w, fmt.Sprintf("%s\n not support", req.URL.Path), http.StatusBadRequest)
 				return
@@ -264,6 +267,7 @@ func handleGet(w http.ResponseWriter, req *http.Request) {
 
 		prices[result.symbol] = result.item
 		e.Recorder.Done(result.symbol)
+		ctxMap[result.symbol]()
 	}
 
 	err := json.NewEncoder(w).Encode(prices)
