@@ -124,6 +124,8 @@ github.com/z-Wind/alphavantage v0.0.0-20200919040521-96315dce398e h1:DIFkyupbxqZ
 github.com/z-Wind/alphavantage v0.0.0-20200919040521-96315dce398e/go.mod h1:GuwH2Yr3W6lWSdr9rcnM31zwLRSFSB9Ek+BIISH3Xns=
 github.com/z-Wind/concurrencyengine v0.0.0-20200919033051-af70b8dc6f6e h1:7cZEOrnZc5bo+Ld4MAROpWlSE9YE1u2hqY2vmAy94gs=
 github.com/z-Wind/concurrencyengine v0.0.0-20200919033051-af70b8dc6f6e/go.mod h1:qW6g7QI79vDLPxb07EuuoOXmbVPbxr+PWm8Ey1rD8ZQ=
+github.com/z-Wind/concurrencyengine v0.0.0-20201210103146-b79b53f16854 h1:k8UUkxcrjVPY0m+bMoE81n1PN0HinMbihDrsHbSXjyQ=
+github.com/z-Wind/concurrencyengine v0.0.0-20201210103146-b79b53f16854/go.mod h1:COCtsD6fq1WbylXL6Uk4xUYSSQGGn5kqoEyh/epGw/w=
 github.com/z-Wind/gotd v0.0.0-20200919034319-2a2ad122dba8 h1:cFHjXhGUy6Pj/Fm+NxvOSFiiz7IUiIUfkmIG5879Rjk=
 github.com/z-Wind/gotd v0.0.0-20200919034319-2a2ad122dba8/go.mod h1:fLTQ1pLlHJ3X/EIjdkTYRZ1W+rdESeQDMyS99Gi82ho=
 github.com/z-Wind/stock v0.0.0-20191220144915-4fbf45ebed39/go.mod h1:PMdwlbHXAen3yIuBmCyoh/F58XwQoVenLFWwAh0X/5o=
@@ -260,6 +262,8 @@ golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxb
 golang.org/x/time v0.0.0-20190308202827-9d24e82272b4/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/time v0.0.0-20191024005414-555d28b269f0 h1:/5xXl8Y5W96D+TtHSlonuFqGHIWVuyCkGJLwGh9JJFs=
 golang.org/x/time v0.0.0-20191024005414-555d28b269f0/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
+golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 h1:Hir2P/De0WpUhtrKGGjvSb2YxUgyZ7EFOSLIcSSpiwE=
+golang.org/x/time v0.0.0-20201208040808-7e3f01d25324/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190114222345-bf090417da8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190226205152-f727befe758c/go.mod h1:9Yl7xja0Znq3iFh3HoIrodX9oNMXvdceNzlUR8zjMvY=

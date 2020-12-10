@@ -43,7 +43,7 @@ func (yf *YahooFinance) Quote(ctx context.Context, symbol string) (float64, erro
 
 // PriceHistory 得到股票歷史價格
 func (yf *YahooFinance) PriceHistory(ctx context.Context, symbol string) ([]*DatePrice, error) {
-	call := yf.Service.History.Period(symbol, "max", "1d")
+	call := yf.Service.History.Between(symbol, time.Date(1900, time.January, 1, 0, 0, 0, 0, time.UTC), time.Now())
 	call.Context(ctx)
 	p, err := call.Do()
 	if err != nil {
@@ -55,6 +55,7 @@ func (yf *YahooFinance) PriceHistory(ctx context.Context, symbol string) ([]*Dat
 		return nil, ErrorFatal{err.Error()}
 	}
 
+	gmtoffset := p.Chart.Result[0].Meta.Gmtoffset
 	timestamps := p.Chart.Result[0].Timestamp
 	Open := p.Chart.Result[0].Indicators.Quote[0].Open
 	High := p.Chart.Result[0].Indicators.Quote[0].High
@@ -67,7 +68,7 @@ func (yf *YahooFinance) PriceHistory(ctx context.Context, symbol string) ([]*Dat
 
 	for i := range timestamps {
 		t := DatePrice{
-			Date:   Time(time.Unix(timestamps[i], 0)),
+			Date:   Time(time.Unix(timestamps[i]+gmtoffset, 0)),
 			Open:   Open[i],
 			High:   High[i],
 			Low:    Low[i],
@@ -86,7 +87,7 @@ func (yf *YahooFinance) PriceHistory(ctx context.Context, symbol string) ([]*Dat
 
 // PriceAdjHistory 得到股票歷史 Adj 價格
 func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*DatePrice, error) {
-	call := yf.Service.History.Period(symbol, "max", "1d")
+	call := yf.Service.History.Between(symbol, time.Date(1900, time.January, 1, 0, 0, 0, 0, time.UTC), time.Now())
 	call.Context(ctx)
 	p, err := call.Do()
 	if err != nil {
@@ -98,6 +99,7 @@ func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*
 		return nil, ErrorFatal{err.Error()}
 	}
 
+	gmtoffset := p.Chart.Result[0].Meta.Gmtoffset
 	timestamps := p.Chart.Result[0].Timestamp
 	Open := p.Chart.Result[0].Indicators.Quote[0].Open
 	High := p.Chart.Result[0].Indicators.Quote[0].High
@@ -110,7 +112,7 @@ func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*
 
 	for i := range timestamps {
 		t := DatePrice{
-			Date:     Time(time.Unix(timestamps[i], 0)),
+			Date:     Time(time.Unix(timestamps[i]+gmtoffset, 0)),
 			Open:     Open[i],
 			High:     High[i],
 			Low:      Low[i],
