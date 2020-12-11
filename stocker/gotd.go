@@ -86,7 +86,7 @@ func (td *TDAmeritrade) PriceHistory(ctx context.Context, symbol string) ([]*Dat
 	}
 
 	if len(timeSeries) == 0 {
-		return nil, ErrorFatal{"Empty List"}
+		return nil, ErrorFatal{"gotd: Empty List"}
 	}
 
 	return timeSeries, nil

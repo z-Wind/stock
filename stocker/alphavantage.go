@@ -90,6 +90,10 @@ func (av *Alphavantage) PriceHistory(ctx context.Context, symbol string) ([]*Dat
 		timeSeries[i] = &t
 	}
 
+	if len(timeSeries) == 0 {
+		return nil, ErrorFatal{"alphavantage: Empty List"}
+	}
+
 	return timeSeries, nil
 }
 
@@ -129,6 +133,10 @@ func (av *Alphavantage) PriceAdjHistory(ctx context.Context, symbol string) ([]*
 			Volume:   trade.Volume,
 		}
 		timeSeries[i] = &t
+	}
+
+	if len(timeSeries) == 0 {
+		return nil, ErrorFatal{"alphavantage: Empty List"}
 	}
 
 	return timeSeries, nil

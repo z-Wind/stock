@@ -79,7 +79,7 @@ func (yf *YahooFinance) PriceHistory(ctx context.Context, symbol string) ([]*Dat
 	}
 
 	if len(timeSeries) == 0 {
-		return nil, ErrorFatal{"Empty List"}
+		return nil, ErrorFatal{"yfinance: Empty List"}
 	}
 
 	return timeSeries, nil
@@ -124,7 +124,7 @@ func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*
 	}
 
 	if len(timeSeries) == 0 {
-		return nil, ErrorFatal{"Empty List"}
+		return nil, ErrorFatal{"yfinance: Empty List"}
 	}
 
 	return timeSeries, nil
