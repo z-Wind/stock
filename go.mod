@@ -3,6 +3,7 @@ module github.com/z-Wind/stock
 go 1.13
 
 require (
+	github.com/PuerkitoBio/goquery v1.6.0
 	github.com/jszwec/csvutil v1.4.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/z-Wind/alphavantage v0.0.0-20200919040521-96315dce398e
@@ -12,5 +13,6 @@ require (
 	github.com/z-Wind/yahoofinance v0.0.0-20201208152059-5f5c102f7c2f
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43 // indirect
+	golang.org/x/text v0.3.3
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
 )
