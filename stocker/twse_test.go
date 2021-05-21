@@ -7,12 +7,10 @@ import (
 )
 
 func TestTWSE_Quote(t *testing.T) {
-	twse, err := NewTWSE()
+	twse, err := NewTWSE("../")
 	if err != nil {
 		t.Fatal(err)
 	}
-	twse.symbolsTWSE_Path = "../TWSE.csv"
-	twse.symbolsTPEx_Path = "../TPEx.csv"
 
 	type args struct {
 		symbol string
@@ -44,12 +42,10 @@ func TestTWSE_Quote(t *testing.T) {
 }
 
 func TestTWSE_getSymbolList(t *testing.T) {
-	twse, err := NewTWSE()
+	twse, err := NewTWSE("../")
 	if err != nil {
 		t.Fatal(err)
 	}
-	twse.symbolsTWSE_Path = "../TWSE.csv"
-	twse.symbolsTPEx_Path = "../TPEx.csv"
 
 	type args struct {
 		url string
@@ -80,12 +76,10 @@ func TestTWSE_getSymbolList(t *testing.T) {
 }
 
 func TestTWSE_isInTWSE(t *testing.T) {
-	twse, err := NewTWSE()
+	twse, err := NewTWSE("../")
 	if err != nil {
 		t.Fatal(err)
 	}
-	twse.symbolsTWSE_Path = "../TWSE.csv"
-	twse.symbolsTPEx_Path = "../TPEx.csv"
 
 	type args struct {
 		symbol string
@@ -111,12 +105,10 @@ func TestTWSE_isInTWSE(t *testing.T) {
 }
 
 func TestTWSE_isInTPEx(t *testing.T) {
-	twse, err := NewTWSE()
+	twse, err := NewTWSE("../")
 	if err != nil {
 		t.Fatal(err)
 	}
-	twse.symbolsTWSE_Path = "../TWSE.csv"
-	twse.symbolsTPEx_Path = "../TPEx.csv"
 
 	type args struct {
 		symbol string

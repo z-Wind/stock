@@ -65,7 +65,7 @@ func setting() {
 	}
 	Register("alphavantage", av)
 
-	twse, err := stocker.NewTWSE()
+	twse, err := stocker.NewTWSE(exePath)
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +92,7 @@ func main() {
 
 	setting()
 
-	engine.ELog.Start("engine.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	engine.ELog.Start(filepath.Join(exePath, "engine.log"), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	engine.ELog.SetFlags(0)
 	defer engine.ELog.Stop()
 

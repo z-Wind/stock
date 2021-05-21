@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -37,17 +38,18 @@ const (
 )
 
 // NewTWSE 建立 twse Service
-func NewTWSE() (*TWSE, error) {
+func NewTWSE(csvFolderPath string) (*TWSE, error) {
 	client := twse.GetClient()
 	twse, err := twse.New(client)
 	if err != nil {
 		return nil, errors.Wrapf(err, "NewTWSE")
 	}
+
 	return &TWSE{
 		Service:          twse,
 		limit:            rate.NewLimiter(rate.Every(time.Second*5/3), 1),
-		symbolsTWSE_Path: "TWSE.csv",
-		symbolsTPEx_Path: "TPEx.csv",
+		symbolsTWSE_Path: filepath.Join(csvFolderPath, "TWSE.csv"),
+		symbolsTPEx_Path: filepath.Join(csvFolderPath, "TPEx.csv"),
 	}, nil
 }
 
