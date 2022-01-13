@@ -2,6 +2,7 @@ package stocker
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -105,7 +106,10 @@ func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*
 	High := p.Chart.Result[0].Indicators.Quote[0].High
 	Low := p.Chart.Result[0].Indicators.Quote[0].Low
 	Close := p.Chart.Result[0].Indicators.Quote[0].Close
-	CloseAdj := p.Chart.Result[0].Indicators.Adjclose[0].Value
+	CloseAdj, err := yf.toAdjHistory(timestamps, Close, p.Chart.Result[0].Events)
+	if err != nil {
+		return nil, ErrorFatal{"yfinance: toAdjHistory"}
+	}
 	Volume := p.Chart.Result[0].Indicators.Quote[0].Volume
 
 	timeSeries := make([]*DatePrice, len(timestamps))
@@ -128,4 +132,36 @@ func (yf *YahooFinance) PriceAdjHistory(ctx context.Context, symbol string) ([]*
 	}
 
 	return timeSeries, nil
+}
+
+// History to Adj History 將歷史價格轉換為歷史 Adj 價格
+func (yf *YahooFinance) toAdjHistory(times []int64, history []float64, event yfinance.Events) ([]float64, error) {
+	if len(times) != len(history) {
+		return nil, ErrorFatal{"yfinance: the lengh of times and history are different"}
+	}
+
+	// splits := event.Splits
+	divs := event.Dividends
+
+	adj := make([]float64, len(history))
+	ratio := 1.0
+	pre_div := 0.0
+	for i := len(times) - 1; i >= 0; i -= 1 {
+		if pre_div != 0 {
+			ratio *= (1.0 - pre_div/history[i])
+			pre_div = 0.0
+		}
+		adj[i] = history[i] * ratio
+
+		date := strconv.FormatInt(times[i], 10)
+		// in yahoo, Close price adjusted for splits.
+		// if split, ok := splits[date]; ok {
+		// 	ratio *= (float64(split.Denominator) / float64(split.Numerator))
+		// }
+		if div, ok := divs[date]; ok {
+			pre_div = div.Amount
+		}
+	}
+
+	return adj, nil
 }
